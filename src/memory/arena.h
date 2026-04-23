@@ -6,9 +6,9 @@
 
 class Arena {
 private :
-    void* ptr{nullptr};
     std::size_t size{};
     std::size_t offset{};
+    void* ptr{nullptr};
 public :
     explicit Arena(std::size_t size);
     ~Arena();
@@ -16,7 +16,7 @@ public :
     Arena(const Arena&) = delete;
     Arena& operator=(const Arena&) = delete;
 
-    void* alloc(std::size_t bytes);
+    void* alloc(std::size_t bytes, std::size_t alignment);
 
 
 };
