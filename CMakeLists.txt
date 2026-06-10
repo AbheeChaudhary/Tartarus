@@ -7,4 +7,6 @@ add_executable(Tartarus src/main.cpp
         src/memory/arena.cpp
         src/memory/arena.h
         src/concurrency/RingBuffer.h
-        )
+        src/engine/OrderBook.h
+        src/engine/OrderBook.cpp
+)
