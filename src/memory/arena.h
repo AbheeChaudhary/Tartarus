@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <cstdlib>
+#include <new>
 
 class Arena {
 private :
@@ -27,7 +28,7 @@ class ArenaAllocator {
 public :
     using value_type = T;
     Arena* arena;
-
+    ArenaAllocator() : arena(nullptr){}
     ArenaAllocator(Arena* a) : arena(a){}
 
     template <typename U>

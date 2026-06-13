@@ -8,7 +8,7 @@
 #include <map>
 #include <vector>
 #include <functional>
-
+#include "../src/memory/arena.h"
 
 
 struct Order {
@@ -22,12 +22,18 @@ struct Order {
 
 };
 
+using ArenaOrderVector = std::vector<Order,ArenaAllocator<Order>>;
+
 class LimitOrderBook {
 private :
-    std::map<uint32_t, std::vector<Order>> ask_book; // orderprice, actual order
-    std::map<uint32_t, std::vector<Order>, std::greater<uint32_t>> bid_book; // orderprice, actual order lists at the price
-public:
-    void add_order(Order order);
+    Arena memory_pool{1024*1024*1024};
 
+    std::map<uint32_t, ArenaOrderVector, std::less<uint32_t>, ArenaAllocator<std::pair<const uint32_t, ArenaOrderVector>>> ask_book; // orderprice, actual order
+    std::map<uint32_t, ArenaOrderVector, std::greater<uint32_t>,ArenaAllocator<std::pair<const uint32_t,ArenaOrderVector>>> bid_book; // orderprice, actual order lists at the price
+public:
+    LimitOrderBook() : ask_book(std::less<uint32_t>(), ArenaAllocator<std::pair<const uint32_t, ArenaOrderVector>>(&memory_pool)),
+                       bid_book(std::greater<uint32_t>(), ArenaAllocator<std::pair<const uint32_t, ArenaOrderVector>>(&memory_pool)){}
+
+    void add_order(Order order);
 };
 

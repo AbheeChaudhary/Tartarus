@@ -13,7 +13,7 @@ void LimitOrderBook::add_order(Order order) {
         while (!ask_book.empty() && order.quantity > 0) {
             const auto best_ask_itr = ask_book.begin();
             const uint32_t best_ask_price = best_ask_itr->first;
-            std::vector<Order>& sellers = best_ask_itr->second;
+            auto& sellers = best_ask_itr->second;
             if (best_ask_price > order.price) break; // if the prices match or that the resting sell order is higher price then we push and break out of the loop
 
             auto seller_itr = sellers.begin();
@@ -52,7 +52,7 @@ void LimitOrderBook::add_order(Order order) {
         while (!bid_book.empty() && order.quantity > 0) {
             const auto best_bid_itr = bid_book.begin();
             const uint32_t best_bid_price = best_bid_itr->first;
-            std::vector<Order>& buyers = best_bid_itr->second;
+            auto& buyers = best_bid_itr->second;
             if (best_bid_price < order.price) break; // if the prices match or that the resting sell order is higher price then we push and break out of the loop
 
             auto buyer_itr = buyers.begin();
@@ -76,7 +76,14 @@ void LimitOrderBook::add_order(Order order) {
                 bid_book.erase(best_bid_itr);
             }
         }
-        if (order.quantity > 0) ask_book[order.price].push_back(order);
+        if (order.quantity > 0) {
+            auto it = ask_book.find(order.price);
+            if (it == ask_book.end()) {
+                ArenaAllocator<Order> alloc = ask_book.get_allocator();
+                it = ask_book.emplace(order.price, ArenaOrderVector(alloc)).first;
+            }
+            it->second.push_back(order);
+        }
     }
 
 }
