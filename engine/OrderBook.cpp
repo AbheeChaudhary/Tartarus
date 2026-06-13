@@ -37,7 +37,16 @@ void LimitOrderBook::add_order(Order order) {
                 ask_book.erase(best_ask_itr);
             }
         }
-        if (order.quantity > 0) bid_book[order.price].push_back(order);
+        if (order.quantity>0) {
+            auto it = bid_book.find(order.price);
+            if (it == bid_book.end()) {
+                ArenaAllocator<Order> alloc = bid_book.get_allocator();
+                it = bid_book.emplace(order.price, ArenaOrderVector(alloc)).first;
+            }
+
+            it->second.push_back(order);
+
+        }
     }
     else {
         while (!bid_book.empty() && order.quantity > 0) {
