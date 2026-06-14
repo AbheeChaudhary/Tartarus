@@ -4,31 +4,73 @@
 ![Build](https://img.shields.io/badge/Build-CMake-brightgreen.svg)
 ![Status](https://img.shields.io/badge/Status-Active_Development-orange.svg)
 
-## Overview
-Tartarus is a bare-metal, ultra-low latency order matching engine engineered entirely from scratch in C++. It is designed to bypass standard operating system bottlenecks (context switches, heap allocation overhead, mutex locks) to achieve deterministic, nanosecond-level execution required in high-frequency trading (HFT) environments.
+## Overview# Tartarus: Low-Latency Limit Order Book (LOB)
 
-## Core Architecture
+Tartarus is a high-performance, multi-threaded Limit Order Book built in standard C++17. Engineered to minimize operating system interference, the system leverages a custom bump-allocator and a cache-aligned lock-free queue to achieve sub-10-microsecond end-to-end matching latency.
 
-### 1. Memory Management: Custom Arena Allocator (Completed)
-Standard heap allocations (`new`, `malloc`) introduce non-deterministic OS overhead and risk memory fragmentation. Tartarus utilizes a pre-allocated memory arena to achieve zero-latency allocations during the critical matching path.
-* **Deterministic Execution:** Allocates memory via O(1) pointer arithmetic.
-* **Hardware Alignment:** Enforces strict byte alignment dynamically to ensure compatibility with hardware-level atomic instructions and prevent cache-line penalties.
+## ⚡ Core Architecture
 
-### 2. Concurrency: Lock-Free SPSC Ring Buffer (In Development)
-Traditional synchronization primitives (`std::mutex`) force threads into OS sleep states, costing thousands of nanoseconds. Tartarus implements a zero-lock concurrency model.
-* **Atomic Synchronization:** Utilizes `std::atomic` with precise memory ordering semantics (`memory_order_acquire` / `memory_order_release`) for thread-safe data passing.
-* **Cache-Line Optimization:** Explicit `alignas(64)` padding prevents false sharing between the producer and consumer indices across CPU cores.
+The system is designed around the principle of isolated verification and zero-allocation critical paths. It consists of three foundational layers:
 
-### 3. Network Stack (Planned)
-* Epoll-based asynchronous event loop for high-throughput connection handling.
-* Custom network packet framing to bypass standard OS network stack latency where possible.
+### 1. Concurrency Model: SPSC Ring Buffer
+To isolate the matching engine from network I/O latency, Tartarus uses a Single-Producer/Single-Consumer (SPSC) Lock-Free Queue.
+* **Cache Alignment:** Pointers are padded and aligned (`alignas(64)`) to the CPU cache line size, eliminating false sharing between threads.
+* **Memory Barriers:** strict `std::memory_order_acquire` and `std::memory_order_release` semantics are used to bypass OS-level mutex locks.
 
-## Build Instructions
-This project utilizes CMake for cross-platform compilation.
+### 2. Memory Management: Custom Arena Allocator
+Dynamic heap allocations (`new`/`delete`) are fatal to high-frequency software. Tartarus overrides standard library allocators using a pre-allocated `ArenaAllocator`.
+* A 1-Gigabyte contiguous memory pool is instantiated at startup.
+* The `std::map` internal Red-Black tree nodes are routed through an adapter template, utilizing $O(1)$ pointer-bump arithmetic instead of querying the OS.
+* Reduces allocation time to ~6 nanoseconds per allocation.
+
+### 3. The Matching Engine
+The core LOB executes strict Price-Time priority matching.
+* Guaranteed safe iterator invalidation during partial fills and aggressive memory pruning when price levels are exhausted.
+
+## 🤖 AI-Augmented CI/CD Pipeline
+
+To ensure memory safety during iterative development, Tartarus integrates an automated AI Code Review agent via the `google-genai` Python SDK.
+* Upon initiating a deployment build, a Python script compiles the engine, runs the 5-million order benchmark, and streams the core C++ logic to a Generative AI model.
+* The AI is role-prompted as a Principal Systems Engineer to perform an architectural review, focusing exclusively on pointer safety, iterator corruption, and algorithmic time complexity before the build is finalized.
+
+## 📊 Benchmarks
+
+Tests conducted on an ARM64 architecture with a 5,000,000 order payload (mixed buys/sells crossing the spread).
+
+| Component | Metric | Performance |
+| :--- | :--- | :--- |
+| **Arena Allocator** | Memory Allocation | 6 ns / allocation |
+| **SPSC Queue** | Cross-Thread Throughput | 125,000,000 msgs / sec |
+| **Matching Engine** | End-to-End Execution | 121,748 trades / sec (~8.2 µs / order)|
+
+## 🛠 Build Instructions
 
 ```bash
 git clone [https://github.com/yourusername/Tartarus.git](https://github.com/yourusername/Tartarus.git)
 cd Tartarus
 mkdir build && cd build
-cmake ..
+cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_CXX_FLAGS="-O3" ..
 make
+./Tartarus
+```
+
+## 🤖 Running AI Code Review
+
+To run the automated AI architectural review pipeline:
+
+1. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Create a `.env` file in the repository root with your Gemini API key:
+   ```
+   GEMINI_API_KEY=your_api_key_here
+   ```
+
+3. Execute the review:
+   ```bash
+   python3 automate_tests.py
+   ```
+   
+   The script will stream the core C++ logic to an AI model for architectural analysis focusing on pointer safety, iterator invalidation, and memory efficiency.
