@@ -238,83 +238,6 @@ The script will:
 
 ---
 
-## 📚 Required Reading (Canonicalized Knowledge)
-
-### Memory & Cache Fundamentals
-- **Book:** *What Every Programmer Should Know About Memory* by Ulrich Drepper  
-  Read Sections 3 (CPU Caches) and 6 (Memory-Related Instructions).  
-  Reference for cache-line behavior, false sharing, and the rationale behind `alignas(64)` padding.
-
-- **Paper:** *The LMAX Disruptor: High Performance Alternative to Bounded Queues* by Martin Fowler & LMAX Architecture Team  
-  Reference for mechanical sympathy, lock-free queue design, and the SPSC pattern used in Tartarus.
-
-### C++ Concurrency & Memory Model
-- **Book:** *C++ Concurrency in Action (2nd Edition)* by Anthony Williams  
-  Read Chapter 5 (The C++ memory model and operations on atomic types) and Chapter 7 (Designing lock-free concurrent data structures).  
-  Essential for understanding `memory_order_acquire`, `memory_order_release`, and lock-free synchronization.
-
-### Memory Allocators & Pool Management
-- **Paper:** *A Scalable Concurrent malloc(3) Implementation for FreeBSD* (jemalloc) by Jason Evans  
-  Read the size-class and slab design sections.  
-  Reference architecture for the fixed-size pool allocator being implemented in V2.
-
-- **Documentation:** Boost.Intrusive — "Intrusive vs Non-Intrusive Containers"  
-  Essential before implementing intrusive data structures in V2.  
-  Understanding intrusive singly-linked lists and the placement of next-pointers within node structures.
-
-### Systems Programming & Kernel Interfaces
-- **Book:** *Operating System Concepts (10th Edition)* by Silberschatz, Galvin, and Gagne  
-  Read Chapter 3 (Processes and IPC) and Chapter 9 (Virtual Memory).  
-  Foundation for POSIX `shm_open`, `mmap`, and IPC patterns used in V5.
-
-- **Guide:** Red Hat — *Low Latency Performance Tuning for RHEL*  
-  Reference for CPU core isolation (`isolcpus`, `nohz_full`), IRQ affinity steering, and hyperthread-sibling considerations.
-
-- **Documentation:** Linux Kernel — `isolcpus` and `nohz_full` boot parameters  
-  Exact mechanisms for moving a core out of the general scheduler's pool and disabling the timer tick.
-
-### Advanced C++ Templates & Type Traits
-- **Book:** *Effective Modern C++* by Scott Meyers  
-  Read Items 1 (Template type deduction), 5 (Prefer `auto`), and 10 (Prefer scoped enums).
-
-- **Book:** *C++ Templates: The Complete Guide (2nd Edition)* by Vandevoorde, Josuttis, and Gregor  
-  Read Chapter 19 (Traits and Policy Classes) and Chapter 21 (Templates and Memory Management).  
-  Foundation for `std::allocator_traits` specialization and SFINAE patterns.
-
-### Networking & Protocols
-- **Book:** *High Performance Browser Networking* by Ilya Grigorik  
-  Read Chapter 17 (WebSocket) for binary payload delivery semantics and subprotocols.  
-  Reference for V3.5's WebSocket gateway design.
-
-### Market Microstructure & Order-Flow Simulation
-- **Concept:** Market-data "conflation" (no single canonical text)  
-  Study real L2/L3 feed handlers (ITCH, OUCH protocols) and their delta-encoding mechanisms.  
-  Reference: Exchange protocol documentation (NASDAQ ITCH 5.0, CME MDR).  
-  Understand why a slow consumer (web dashboard) receives conflated snapshots, not a queue of every event.
-
-- **Book:** *Pattern Recognition and Machine Learning* by Christopher M. Bishop  
-  Read Chapter 1 (Probability & Decision Theory) and Chapter 3 (Linear Models for Regression).  
-  Foundation for the ANFIS fuzzy-logic simulation in V5.
-
----
-
-## 📋 Development Roadmap & Timeline
-
-### V2.0 Development Sprint (10 Days)
-- **Days 1–3:** Pool allocator design & implementation; intrusive free-list validation under ASan/TSan.
-- **Days 4–5:** Intrusive linked-list price-level containers; order cancellation & modification; benchmark cancel latency.
-- **Days 6–7:** Ring buffer power-of-two optimization, `_mm_pause()` integration, CPU affinity configuration.
-- **Days 8–9:** Execution logging, per-order latency instrumentation (p50/p99/p99.9).
-- **Day 10:** Integration benchmark, README update, interview narrative rehearsal.
-
-### V3.0–V6.0 (Post-Interview, Long-Term)
-- V3: Custom network stack, automated feed simulation.
-- V3.5: Web-deployed simulation interface, conflation layer, interactive dashboard.
-- V4: Distributed persistence (PostgreSQL + MongoDB WAL).
-- V5: Cross-process IPC (`mmap`), adversarial ML agent.
-- V6: Hardware acceleration (RISC-V FPGA core).
-
----
 
 ## 🔬 Testing & Validation
 
@@ -324,20 +247,15 @@ cd build
 ctest --verbose
 ```
 
-### Benchmark with Instrumentation (V2)
-```bash
-./Tartarus-v2 --benchmark --histogram --output=v2_latency_report.txt
-```
-
 ### Memory Safety
 ```bash
 # Run under AddressSanitizer
 cmake -DCMAKE_CXX_FLAGS="-fsanitize=address -g" ..
-make && ./Tartarus-v2
+make && ./Tartarus
 
 # Run under ThreadSanitizer
 cmake -DCMAKE_CXX_FLAGS="-fsanitize=thread -g" ..
-make && ./Tartarus-v2
+make && ./Tartarus
 ```
 
 ---
@@ -353,12 +271,6 @@ Tartarus is released under the MIT License. See `LICENSE` for details.
 **Abhee Chaudhary** — IIIT Kota, ECE  
 GitHub: [@AbheeChaudhary](https://github.com/AbheeChaudhary)  
 Focus: Low-latency systems, high-frequency trading infrastructure, custom memory management.
-
----
-
-## 🤝 Contributing
-
-This is an active research/portfolio project. Contributions, bug reports, and architectural discussions are welcome. Please open an issue or a pull request.
 
 ---
 
