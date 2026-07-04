@@ -1,0 +1,3 @@
+/Users/abhee12/CLionProjects/Tartarus/CMakeFiles/Tartarus.dir
+/Users/abhee12/CLionProjects/Tartarus/CMakeFiles/edit_cache.dir
+/Users/abhee12/CLionProjects/Tartarus/CMakeFiles/rebuild_cache.dir

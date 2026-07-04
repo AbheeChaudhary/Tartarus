@@ -6,7 +6,7 @@ CXX_DEFINES =
 
 CXX_INCLUDES = 
 
-CXX_FLAGSarm64 = -fsanitize=thread -g -O3 -std=gnu++17 -arch arm64
+CXX_FLAGSarm64 =  -O3 -std=gnu++17 -arch arm64
 
-CXX_FLAGS = -fsanitize=thread -g -O3 -std=gnu++17 -arch arm64
+CXX_FLAGS =  -O3 -std=gnu++17 -arch arm64
 
