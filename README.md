@@ -10,9 +10,9 @@ Tartarus is an enterprise-grade, multi-version limit order book (LOB) ecosystem 
 
 **V1.0** (current baseline) establishes a correct, measurable foundation: a single-process matching engine with custom arena allocation and lock-free SPSC ingestion, achieving sub-10-microsecond matching latency on ARM64.
 
-**V2.0** (in development) replaces V1's allocate-only arena with a fixed-size pool allocator enabling order cancellation/modification, introduces measurable per-order latency instrumentation, and hardenes CPU core isolation.
+**V2.0** (in development) replaces V1's allocate-only arena with a fixed-size pool allocator enabling order cancellation/modification, introduces measurable per-order latency instrumentation, and hardens CPU core isolation.
 
-Versions 3–6 extend into kernel-bypass networking, distributed persistence, cross-process IPC, and adversarial ML testing — each version explicitly addressing bottlenecks discovered in the prior release.
+Versions 3–6 extend into kernel-bypass networking, distributed persistence, cross-process IPC, and adversarial ML testing — each version explicitly addressing bottlenecks discovered in the prior release. These features will be standalone projects which will then integrated into Tartarus.
 
 ---
 
@@ -137,52 +137,6 @@ A Python/Gemini agent performs automated architectural analysis before each depl
 
 ---
 
-### V4.0 — Distributed Persistence & Backpressure
-**Status:** 🔵 Planned (post-V3).
-
-**Architecture:**
-- Asynchronous, non-blocking write-ahead logging (WAL) consumed by a dedicated persistence thread.
-- Trade executions flushed to a distributed PostgreSQL cluster for ACID-compliant ledger integrity.
-- Periodic state snapshots written to MongoDB for rapid crash-recovery rehydration without full WAL replay.
-
-**Bottleneck Resolutions:**
-- Solves in-memory-only state loss during catastrophic failure.
-- Removes blocking disk I/O latency from the matching thread's critical path by fully decoupling persistence into an independent consumer thread.
-
-**Open Constraints:**
-- A strict backpressure mechanism must be defined if WAL consumer throughput falls behind matching-engine trade-generation rate, to prevent unbounded queue growth.
-- A reconciliation and idempotency strategy must be established for dual-write consistency between PostgreSQL and MongoDB under partial failure.
-
----
-
-### V5.0 — Decoupled IPC & Adversarial ML Agent
-**Status:** 🔵 Planned (post-V4).
-
-**Architecture:**
-- An independent `uWebSockets` edge gateway process communicating with the matching engine via POSIX shared memory (`mmap`), superseding the provisional serialization contract from V3.5.
-- An adversarial Python/`libtorch` ML agent attaches to the same shared-memory region to generate real-time predictive order flow for non-linear market-stress testing.
-- **Neuro-Fuzzy (ANFIS) market simulation:** Fuzzy-logic rules map order-book imbalance metrics to probability distributions over next-tick price movement, driving adaptive order-generation rates into the matching engine.
-
-**Bottleneck Resolutions:**
-- Eliminates serialization overhead at the network boundary by replacing socket-based marshaling with direct shared-memory access between gateway and engine processes.
-- Extends test coverage beyond manually enumerated edge cases via generative adversarial order-flow, exercising the matching engine against stress patterns not captured by V3's synthetic feed simulator.
-
-**Open Constraints:**
-- Explicit cross-process synchronization (semaphore or atomic-flag protocol) must be implemented across the `mmap` boundary — a coordination problem structurally identical to V1's thread synchronization, now recurring at process scale.
-- The ML agent's inference latency must be isolated via non-blocking reads on the engine side, ensuring a stalled or slow Python process cannot backpressure the core C++ matching engine.
-
----
-
-### V6.0 — Hardware Acceleration & CPU Core Customization
-**Status:** 🔵 Planned (post-V5, long-term).
-
-**Architecture:**
-- Integration of a custom RISC-V CPU core (Spartan-7 FPGA) via PCIe or UART simulation.
-- Exploration of hardware-accelerated order-matching or risk-gateway logic.
-- Possible instruction-set extension for market-microstructure-specific operations (e.g., price-time priority comparison, RB-tree node allocation).
-
----
-
 ## Bottleneck Ledger (Unresolved & In-Progress)
 
 This ledger documents the specific architectural failures and hardware constraints discovered during each version, along with their resolution strategy.
@@ -199,26 +153,7 @@ This ledger documents the specific architectural failures and hardware constrain
 | B7 | No execution log | Fills are unrecoverable; no audit trail for post-hoc analysis. | Append-only, arena-backed fill log with `{order_id, qty, price, timestamp}` records. | In Progress (Day 8) |
 | B8 | No per-order instrumentation | Only aggregate throughput measured; "sub-10-µs" claim unsubstantiated. | `rdtsc` or `std::chrono` per-order timing; p50/p99/p99.9 histogram at shutdown. | In Progress (Day 8–9) |
 
-### V2 → V3 (Unresolved at End of V2)
-| ID | Bottleneck | Failure Mode | V3 Resolution | Status |
-|:----|:-----------|:-------------|:--------------|:-------|
-| B9 | Pool undersizing | Fixed pool capacity assumes bounded working-set; undersizing reintroduces exhaustion. | Dynamic working-set profiling; re-sizing strategy under sustained load. | Planned |
-| B10 | Cache-coherency cost unmeasured | MESI invalidation traffic between pinned threads is unbounded; may dominate latency. | CPU-isolated benchmarking (perfstat, perf); measure L1/L2 miss rates. | Planned |
-| B11 | Hand-rolled TCP correctness | Custom TCP state machine lacks kernel's hardened retransmission/congestion-control logic. | Hardenening via `scapy` synthetic packet-loss/reordering injection. | Planned |
 
-### V3 → V4 (Unresolved at End of V3)
-| ID | Bottleneck | Failure Mode | V4 Resolution | Status |
-|:----|:-----------|:-------------|:--------------|:-------|
-| B12 | WAL consumer throughput unbounded | If persistence falls behind trade generation, queue grows without bound; memory OOM. | Strict backpressure mechanism: block matching thread if WAL queue exceeds threshold. | Planned |
-| B13 | Dual-write consistency | PostgreSQL ledger and MongoDB snapshot can diverge under partial failure. | Reconciliation & idempotency strategy; eventual consistency model or distributed transaction. | Planned |
-
-### V5+ (Long-term Hardening)
-| ID | Bottleneck | Failure Mode | V5+ Resolution | Status |
-|:----|:-----------|:-------------|:--------------|:-------|
-| B14 | Cross-process synchronization | `mmap` IPC between gateway and engine requires explicit semaphore/atomic protocols; unrefined. | Implement & document semaphore-based signaling; add inter-process benchmarks. | Planned |
-| B15 | ML agent backpressure | Slow Python inference can stall shared-memory read, impacting engine latency. | Non-blocking read pattern on engine side; separate inference & decision threads in agent. | Planned |
-
----
 
 ## 📊 Benchmarks
 
